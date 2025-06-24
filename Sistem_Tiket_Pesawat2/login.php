@@ -1,40 +1,55 @@
 <?php
 session_start();
-include_once 'db_connection.php'; // Ensure session is started here too for security
+include_once 'db_connection.php';
 
 $error_message = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = trim($_POST['username'] ?? '');
+    $username_or_email = trim($_POST['username'] ?? ''); // Bisa username atau email
     $password = $_POST['password'] ?? '';
 
-    // Prepare a SQL statement to fetch user from the 'users' table
-    $sql = "SELECT id, username, password FROM users WHERE username = ?";
+    // Cari user di tabel 'users' berdasarkan username atau email
+    $sql = "SELECT id, username, password, email FROM users WHERE username = ? OR email = ?";
     $stmt = $conn->prepare($sql);
-    if ($stmt === false) { // Added error handling for prepare
-        $error_message = 'Error preparing statement: ' . $conn->error;
-    } else {
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
+    $stmt->bind_param("ss", $username_or_email, $username_or_email);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-        if ($result->num_rows === 1) {
-            $user = $result->fetch_assoc();
-            // Verify the hashed password
-            if (password_verify($password, $user['password'])) {
-                $_SESSION['loggedin'] = true;
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['user_id'] = $user['id']; // Store user ID in session
-                header("Location: index.php"); // Redirect to index or dashboard after successful login
-                exit();
+    if ($result->num_rows === 1) {
+        $user = $result->fetch_assoc();
+        // Verify the hashed password
+        if (password_verify($password, $user['password'])) {
+            $_SESSION['loggedin'] = true;
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['user_id'] = $user['id']; // ID dari tabel users
+            $_SESSION['user_email'] = $user['email']; // Email dari tabel users
+
+            // Sekarang, ambil ID_CUST dari tabel customer menggunakan email
+            $sql_cust_id = "SELECT ID_CUST FROM customer WHERE EMAIL = ?";
+            $stmt_cust_id = $conn->prepare($sql_cust_id);
+            $stmt_cust_id->bind_param("s", $_SESSION['user_email']);
+            $stmt_cust_id->execute();
+            $result_cust_id = $stmt_cust_id->get_result();
+
+            if ($result_cust_id->num_rows === 1) {
+                $cust_row = $result_cust_id->fetch_assoc();
+                $_SESSION['ID_CUST'] = $cust_row['ID_CUST']; // Simpan ID_CUST ke sesi
             } else {
-                $error_message = 'Username atau password salah.';
+                // Opsional: Handle jika email pengguna di tabel users tidak ditemukan di customer
+                // Ini bisa terjadi jika user mendaftar tapi belum pernah memesan tiket (belum ada di customer table)
+                $_SESSION['ID_CUST'] = null; // Set null atau biarkan kosong
             }
+            $stmt_cust_id->close();
+
+            header("Location: index.php");
+            exit();
         } else {
-            $error_message = 'Username atau password salah.';
+            $error_message = 'Username/Email atau password salah.';
         }
-        $stmt->close();
+    } else {
+        $error_message = 'Username/Email atau password salah.';
     }
+    $stmt->close();
 }
 ?>
 
@@ -57,7 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <?php endif; ?>
             <form action="login.php" method="POST" class="login-form card">
                 <div class="form-group">
-                    <label for="username">Username:</label>
+                    <label for="username">Username atau Email:</label>
                     <input type="text" id="username" name="username" required>
                 </div>
                 <div class="form-group">
@@ -77,4 +92,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </footer>
 </body>
 </html>
-<?php $conn->close(); ?>
+<?php $conn->close(); ?>    

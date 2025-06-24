@@ -1,7 +1,14 @@
 <?php
-// Pastikan db_connection.php ada dan berfungsi
-include_once 'db_connection.php';
-session_start(); // Tambahkan session_start() jika belum ada
+session_start(); // Pastikan session dimulai
+include_once 'db_connection.php'; // Pastikan db_connection.php ada dan berfungsi
+
+// === START AUTENTIKASI CHECK ===
+// Jika pengguna belum login, arahkan ke halaman login
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+    header("Location: login.php");
+    exit();
+}
+// === END AUTENTIKASI CHECK ===
 
 // Ambil daftar kota asal (CITY) yang unik dari tabel penerbangan
 $origin_cities = [];
@@ -29,14 +36,12 @@ $sql_routes = "SELECT CITY, TUJUAN FROM penerbangan";
 $result_routes = $conn->query($sql_routes);
 if ($result_routes && $result_routes->num_rows > 0) {
     while ($row = $result_routes->fetch_assoc()) {
-        // Buat array multidimensi: origin -> [destinations]
         if (!isset($flight_routes[$row['CITY']])) {
             $flight_routes[$row['CITY']] = [];
         }
         $flight_routes[$row['CITY']][] = $row['TUJUAN'];
     }
 }
-// Konversi ke JSON agar bisa diakses oleh JavaScript
 $flight_routes_json = json_encode($flight_routes);
 
 ?>
@@ -56,13 +61,14 @@ $flight_routes_json = json_encode($flight_routes);
                 <ul>
                     <li><a href="index.php">Cari Penerbangan</a></li>
                     <li><a href="my_bookings.php">Pemesanan Saya</a></li>
-                    <?php if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true): ?>
+                    <?php
+                    // Tampilkan nama pengguna jika login, atau tombol login/signin jika belum
+                    if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true):
+                    ?>
+                        <li><span>Selamat Datang, <?php echo htmlspecialchars($_SESSION['username']); ?>!</span></li>
                         <li><a href="logout.php" class="btn-logout">Logout</a></li>
-                    <?php else: ?>
-                        <li><a href="login.php" class="btn-login">Login</a></li>
-                        <li><a href="register.php" class="btn-register">Sign In</a></li>
                     <?php endif; ?>
-                </ul>
+                    </ul>
             </nav>
         </div>
     </header>
@@ -113,20 +119,17 @@ $flight_routes_json = json_encode($flight_routes);
     </footer>
 
     <script>
-        // Data rute penerbangan dari PHP
         const flightRoutes = <?php echo $flight_routes_json; ?>;
 
         const originSelect = document.getElementById('origin_city');
         const destinationSelect = document.getElementById('destination_city');
 
-        // Fungsi untuk memperbarui pilihan kota tujuan berdasarkan kota asal yang dipilih
         function updateDestinationOptions() {
             const selectedOrigin = originSelect.value;
-            destinationSelect.innerHTML = '<option value="">Pilih Kota Tujuan</option>'; // Reset tujuan
+            destinationSelect.innerHTML = '<option value="">Pilih Kota Tujuan</option>';
 
             if (selectedOrigin && flightRoutes[selectedOrigin]) {
                 const availableDestinations = flightRoutes[selectedOrigin];
-                // Pastikan setiap tujuan unik dan urutkan
                 const uniqueSortedDestinations = [...new Set(availableDestinations)].sort();
 
                 uniqueSortedDestinations.forEach(destination => {
@@ -136,8 +139,6 @@ $flight_routes_json = json_encode($flight_routes);
                     destinationSelect.appendChild(option);
                 });
             } else {
-                // Jika tidak ada kota asal dipilih, tampilkan semua kota tujuan yang ada
-                // (Ini mengambil dari semua tujuan yang mungkin, tidak hanya yang berhubungan dengan rute tertentu)
                 const allPossibleDestinations = [];
                 for (const origin in flightRoutes) {
                     flightRoutes[origin].forEach(dest => {
@@ -153,17 +154,15 @@ $flight_routes_json = json_encode($flight_routes);
                 });
             }
         }
-
-        // Panggil fungsi saat halaman dimuat untuk mengisi tujuan awal (bisa semua tujuan atau kosong)
-        // updateDestinationOptions(); // Opsi: Panggil ini untuk mengisi semua tujuan saat awal
-
-        // Tambahkan event listener untuk perubahan pada combobox Kota Asal
         originSelect.addEventListener('change', updateDestinationOptions);
+
+        // Panggil saat halaman dimuat agar kota tujuan terisi jika ada kota asal yang terpilih secara default (jika Anda memiliki itu)
+        // Atau agar semua kota tujuan ditampilkan saat awal load jika belum ada pilihan asal
+        // updateDestinationOptions(); // Uncomment if you want initial population
     </script>
 </body>
 </html>
 <?php
-// Tutup koneksi database setelah semua operasi selesai
 if (isset($conn) && $conn instanceof mysqli) {
     $conn->close();
 }

@@ -395,4 +395,41 @@ footer {
     margin-bottom: 20px;
 }
 
+/* Tambahkan di bagian buttons */
+.btn-secondary {
+    background-color: #17a2b8; /* Teal color for secondary actions */
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #138496;
+}
+
+/* Style untuk halaman edit booking */
+.edit-booking-page {
+    padding: 40px 0;
+}
+
+.edit-booking-page .booking-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.edit-booking-page select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+
 /* ... (keep existing styles) ... */

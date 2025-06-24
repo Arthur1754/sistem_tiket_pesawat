@@ -2,6 +2,16 @@
 session_start(); // Start session to use header.php
 include_once 'db_connection.php';
 
+// === START AUTENTIKASI CHECK ===
+// Jika pengguna belum login, arahkan ke halaman login
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+    header("Location: login.php");
+    exit();
+}
+// === END AUTENTIKASI CHECK ===
+
+// ... sisa kode halaman tersebut ...
+
 $origin_city = $_GET['origin_city'] ?? '';
 $destination_city = $_GET['destination_city'] ?? '';
 $departure_date = $_GET['departure_date'] ?? '';
